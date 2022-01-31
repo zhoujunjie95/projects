@@ -1,0 +1,149 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+Junjie Zhou
+STOR 455 Homework 6
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(mosaic)
+library(Stat2Data)
+library(dplyr)
+library(corrplot)
+library(car)
+library(leaps)
+
+full = read_csv("C:/Users/junji/Desktop/STOR455/Data/Coverage.csv")
+```
+This dataset contains the amount of people that are policy holders of full coverage motor insurance and basic information about them. I got this dataset from a study done at the university of Barcelona. Variables in the data include age, seniority, men, urban, private, and marital. Only age and seniority are numeric variables. The data was already downloadable in a csv file so no manipulation was done to the dataset.
+
+```{r}
+#A
+mod=glm(y~age,family=binomial,data=full)
+summary(mod)
+
+B0 = summary(mod)$coef[1]
+B1 = summary(mod)$coef[2]
+
+#B
+plot(jitter(y,amount=0.1)~age,ylim=c(-0.25,1.25),data=full)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+
+plot(y~age, data=full)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+```{r}
+#C
+emplogitplot1(y~age, data=full, ngroups="all")
+emplogitplot1(y~age, data=full, ngroups=5)
+```
+As you can see from the groups of 5 that this data tends to be very linear except for a few occassional outliers.
+
+```{r}
+#D
+summary(mod)
+```
+Ho:There is no relationship between the X variable and the Y variable
+Ha:there is a relationship between the X variable and the Y variable
+Since the p-value for age is less than 0.05 we can conclude that age is significant to the model and that the predicted y values are not due to chance.
+
+```{r}
+#E
+SE_B1 = summary(mod)$coef[2,2]
+exp(B1 - SE_B1*qnorm(0.975))
+exp(B1 + SE_B1*qnorm(0.975))
+exp(confint(mod))
+exp(-0.03)
+```
+95% Confidence Interval for odds ratio is (0.965,0.975)
+In this data, there is an odds ratio of 0.970 with a confidence interval of 0.965 to 0.975 which suggests that there is a 95% probability that the true odds ratio would be likely to lie in the range 0.965-0.975 assuming there is no bias or confounding.
+
+```{r}
+#tally(~full$y)
+#1387/(1387+2613)
+#L.null = (.97)^1387*(1-.97)^2613
+#L.null
+#-2*log(L.null)
+```
+
+```{r}
+#F
+#5163.3-5023.9
+#1-pchisq(139.4,1)
+G = summary(mod)$null.deviance - summary(mod)$deviance
+1 - pchisq(G,2)
+```
+G=139.4
+```{r}
+anova(mod, test="Chisq")
+```
+Our p-value of <2.2e-16 is smaller than the 0.05 significance level so we can reject the null hypothesis and suggest that there is a relationship between age and whether or not they bought full coverage auto insurance.
+
+```{r}
+#G-A
+mod2=glm(y~seniority,family=binomial,data=full)
+summary(mod2)
+
+B0 = summary(mod2)$coef[1]
+B1 = summary(mod2)$coef[2]
+
+#B
+plot(jitter(y,amount=0.1)~seniority,ylim=c(-0.25,1.25),data=full)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+
+plot(y~seniority, data=full)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+```{r}
+#C
+emplogitplot1(y~seniority, data=full, ngroups="all")
+emplogitplot1(y~seniority, data=full, ngroups=5)
+```
+As you can see from the groups of 5, this data tends to be very linear, however the points vary further from the line as seniority increases. 
+
+```{r}
+#D
+summary(mod2)
+```
+Ho:There is no relationship between the X variable and the Y variable
+Ha:there is a relationship between the X variable and the Y variable
+Since the p-value for seniority is less than 0.05 we can conclude that seniority is significant to the model and that the predicted y values are not due to chance.
+
+```{r}
+#E
+SE_B1 = summary(mod2)$coef[2,2]
+exp(B1 - SE_B1*qnorm(0.975))
+exp(B1 + SE_B1*qnorm(0.975))
+exp(confint(mod2))
+exp(0.06)
+```
+95% Confidence Interval for odds ratio is (0.965,0.975)
+In this data, there is an odds ratio of 1.062 with a confidence interval of 1.053 to 1.074 which suggests that there is a 95% probability that the true odds ratio would be likely to lie in the range 1.053-1.074 assuming there is no bias or confounding.
+
+```{r}
+#tally(~full$y)
+#1387/(1387+2613)
+#L.null = (.97)^1387*(1-.97)^2613
+#L.null
+#-2*log(L.null)
+```
+
+```{r}
+#F
+#5163.3-5010.7
+#1-pchisq(152.5,1)
+G = summary(mod2)$null.deviance - summary(mod2)$deviance
+1 - pchisq(G,1)
+```
+G=152.6
+```{r}
+anova(mod2, test="Chisq")
+```
+Our p-value of <2.2e-16 is smaller than the 0.05 significance level so we can reject the null hypothesis and suggest that there is a relationship between seniority in the company and whether or not they bought full coverage auto insurance. I think both my models were effective since both age and seniority were significant to the model and had a similar p-value. However, I think using age as a predictor variable was better since the graph of age vs log(odds) showed a better fit and the points were more homoscedastic.
+
+
