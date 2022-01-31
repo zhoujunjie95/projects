@@ -1,0 +1,135 @@
+---
+title: "STOR455 Project"
+output: html_document
+df_print: paged
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(mosaic)
+library(readr)
+library(car)
+library(corrplot)
+library(leaps)
+source("ShowSubsets.r")
+
+Houses=read_csv("C:/Users/Junjie/Downloads/AmesTrain13.csv")
+head(Houses)
+```
+
+```{r}
+#1
+Houses2=Houses[ , -c(1,5,6,11,12,13,14,15,16,20,21,22,31,34,37,38)]
+```
+
+```{r}
+#All Subsets
+all=regsubsets(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementSF+GroundSF+BasementFBath+BasementHBath+FullBath+HalfBath+Bedroom+TotalRooms+Fireplaces+GarageCars+GarageSF+WoodDeckSF+OpenPorchSF+EnclosedPorchSF+ScreenPorchSF, data = Houses2, nvmax=15)
+ShowSubsets(all)
+AllSubsetsModel=lm(Price~LotArea + Quality + Condition + YearBuilt + BasementSF + GroundSF + BasementFBath + FullBath + HalfBath + Bedroom + TotalRooms + GarageSF + WoodDeckSF + OpenPorchSF + ScreenPorchSF, data = Houses2)
+```
+
+```{r}
+summary(AllSubsetsModel)
+vif(AllSubsetsModel)
+```
+
+
+```{r}
+#Backward Selection
+lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementSF+GroundSF+BasementFBath+BasementHBath+FullBath+HalfBath+Bedroom+TotalRooms+Fireplaces+GarageCars+GarageSF+WoodDeckSF+OpenPorchSF+EnclosedPorchSF+ScreenPorchSF, data = Houses2)
+
+Full=lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementSF+GroundSF+BasementFBath+BasementHBath+FullBath+HalfBath+Bedroom+TotalRooms+Fireplaces+GarageCars+GarageSF+WoodDeckSF+OpenPorchSF+EnclosedPorchSF+ScreenPorchSF, data = Houses2)
+
+MSE=(summary(Full)$sigma)^2
+step(Full,scale=MSE, trace = FALSE)
+```
+
+```{r}
+#Forward Selection
+Full=lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementSF+GroundSF+BasementFBath+BasementHBath+FullBath+HalfBath+Bedroom+TotalRooms+Fireplaces+GarageCars+GarageSF+WoodDeckSF+OpenPorchSF+EnclosedPorchSF+ScreenPorchSF, data = Houses2)
+
+MSE=(summary(Full)$sigma)^2
+none=lm(Price~1, data = Houses2)
+step(none,scope=list(upper=Full), scale=MSE, direction="forward", trace = FALSE)
+```
+
+```{r}
+#Stepwise
+Full=lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementSF+GroundSF+BasementFBath+BasementHBath+FullBath+HalfBath+Bedroom+TotalRooms+Fireplaces+GarageCars+GarageSF+WoodDeckSF+OpenPorchSF+EnclosedPorchSF+ScreenPorchSF, data = Houses2)
+
+MSE=(summary(Full)$sigma)^2
+none=lm(Price~1, data = Houses2)
+step(none, scope=list(upper=Full), scale=MSE, trace = FALSE)
+```
+We ran all-subsets, backward, forward, and step selection on all the predictor models, and decided to use all-subsets because it is given that it will provide us the best model. We ran a vif test to test for multicollinearity. We found that GroundSF had a vif value of over 5, which means that GroundSF is highly correlated with some of the other predictor variables in our model. Most of the remainder of the predictor variables have vif values below 3. All the predictor variables are significant at the 5% level. 
+
+```{r}
+#2
+plot(AllSubsetsModel)
+hist(AllSubsetsModel$residuals)
+plot(AllSubsetsModel$fitted.values, rstandard(AllSubsetsModel))
+mean(AllSubsetsModel$residuals)
+max(rstandard(AllSubsetsModel))
+min(rstandard(AllSubsetsModel))
+which.max(rstandard(AllSubsetsModel))
+```
+Plotting the residuals against the fitted values reveals that most points falls between an rstandard of -2 and 2, and taking the mean of the residuals equals close to zero, satisfying the zero mean requirement. However the residuals vs fitted plot shows a curved line and a pattern among the errors, so the residuals do not have a constant variance and are not independent. While it fulfills the mean zero requirement, a simple linear model might not be the best fit.
+
+No clear skewness in the histogram indicates that the residuals are normal. Although the qqplot displays heavy tails, most data in the qqplot follow the qqline which satisfies the normality condition.  
+
+There is one unusual point, point 180, which has a residual of 6.087278. 
+
+```{r}
+#3
+Houses3=Houses2
+```
+
+```{r}
+Houses3$PorchSF = Houses3$WoodDeckSF + Houses3$OpenPorchSF + Houses3$ScreenPorchSF
+```
+
+Because all three of these variables, WoodDeckSF + OpenPorchSF + ScreenPorchSF, were significant and have to do with porch 
+square footage, we decided to combine the variabels together and create a new variable PorchSF. 
+
+```{r}
+FancyAllSubsetsModel=lm(log(Price) ~ LotArea + I(Quality^2) + Condition + YearBuilt + BasementSF + GroundSF + BasementFBath + FullBath + HalfBath + Bedroom + TotalRooms + GarageSF + PorchSF, data = Houses3)
+plot(FancyAllSubsetsModel)
+#plot(log(Price)~., data = Houses3)
+summary(FancyAllSubsetsModel)
+#plot(log(Price)~YearBuilt, data = Houses3)
+#plot(log(Price)~log(YearBuilt), data = Houses3)
+#plot(log(Price)~Quality, data = Houses3)
+#plot(log(Price)~I(Quality^2), data = Houses3)
+```
+We applied log to price to reduce the variability of data and outliers. We squared quality to give more weight to this variable. The result of this yields a fitted vs predicted residual plot with more constant variance, and a mean of the residuals closer to zero. 
+
+In the future, if we are working with a dataset with large residuals or outliers, or if there is a curved pattern to the residuals, we can use log to normalize the residuals. 
+
+```{r}
+#4
+plot(FancyAllSubsetsModel)
+plot(FancyAllSubsetsModel$fitted.values, rstandard(FancyAllSubsetsModel))
+hist(FancyAllSubsetsModel$residuals)
+mean(FancyAllSubsetsModel$residuals)
+max(rstandard(FancyAllSubsetsModel))
+min(rstandard(FancyAllSubsetsModel))
+which.min(rstandard(FancyAllSubsetsModel))
+```
+Plotting the residuals against the fitted values reveals that most points fall between an rstandard of -2 and 2, and taking the mean of the residuals equals close to zero, satisfying the zero mean requirement. The residuals vs fitted plot does not show a curved line or a pattern among the errors, so the residuals do have a constant variance and are independent.
+
+Although the qqplot does not display as heavy tails as before, most data in the qqplot follow the qqline which satisfies the normality condition.  
+
+There is one unusual point, point 472, which has a residual of -5.93585. 
+
+```{r}
+#5
+summary(FancyAllSubsetsModel)
+new=data.frame(Quality=7,GroundSF=2314,BasementSF=1150,BasementFBath=0,LotArea=11060,YearBuilt=1995,Bedroom=3,Condition=5,GarageSF=502, FullBath=2, HalfBath=1, TotalRooms=9, PorchSF=274)
+predict.lm(FancyAllSubsetsModel, new, interval="prediction", level=0.95)
+exp(5.277167)*1000
+exp(5.791336)*1000
+exp(5.534251)*1000
+```
+The 95% prediction interval is between $(195,814.3, 327,450.2).
+The exact prediction is $253,218.1.
+
